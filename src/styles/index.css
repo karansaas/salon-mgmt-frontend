@@ -3,3 +3,10 @@
 @tailwind utilities;
 
 @layer base { body { @apply bg-slate-50 font-sans text-slate-900 antialiased; } }
+
+@media print {
+  body * { visibility: hidden; }
+  .invoice-print, .invoice-print * { visibility: visible; }
+  .invoice-print { position: absolute; inset: 0; width: 100%; padding: 24px; background: white; }
+  .no-print { display: none !important; }
+}
