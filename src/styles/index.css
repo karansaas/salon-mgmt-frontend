@@ -4,9 +4,28 @@
 
 @layer base { body { @apply bg-slate-50 font-sans text-slate-900 antialiased; } }
 
+@page { size: 80mm auto; margin: 2mm; }
+
 @media print {
+  html, body { width: 80mm; margin: 0; padding: 0; background: #fff; }
   body * { visibility: hidden; }
   .invoice-print, .invoice-print * { visibility: visible; }
-  .invoice-print { position: absolute; inset: 0; width: 100%; padding: 24px; background: white; }
+  .invoice-print { position: absolute; inset: 0; width: 76mm; max-width: 76mm; margin: 0; padding: 0; background: #fff; color: #000; font-size: 10px; line-height: 1.35; }
   .no-print { display: none !important; }
+  .invoice-print .space-y-6 > * + * { margin-top: 10px; }
+  .invoice-print .grid { display: block; }
+  .invoice-print .grid > * + * { margin-top: 8px; }
+  .invoice-print .rounded-xl { border: 0; border-radius: 0; box-shadow: none; padding: 0; }
+  .invoice-print header { padding-bottom: 8px; }
+  .invoice-print h1 { font-size: 16px; line-height: 1.2; }
+  .invoice-print h2 { font-size: 13px; }
+  .invoice-print .text-2xl { font-size: 16px; }
+  .invoice-print .text-xl { font-size: 14px; }
+  .invoice-print .text-lg { font-size: 12px; }
+  .invoice-print .text-sm, .invoice-print .text-xs { font-size: 9px; }
+  .invoice-print table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 8px; }
+  .invoice-print th, .invoice-print td { padding: 3px 1px; overflow-wrap: anywhere; vertical-align: top; }
+  .invoice-print th { font-size: 7px; }
+  .invoice-print .overflow-x-auto { overflow: visible; }
+  .invoice-print footer { margin-top: 10px; padding-top: 8px; }
 }
