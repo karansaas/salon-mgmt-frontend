@@ -34,3 +34,10 @@ export interface LoyaltyAdjustmentInput {
   points: number;
   reason: string;
 }
+
+export interface LoyaltyConfig {
+  spendPerPoint: number;
+  minimumRedemptionPoints: number;
+  redemptionPoints: number;
+  redemptionValue: number;
+}
