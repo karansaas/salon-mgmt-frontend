@@ -1,23 +1,34 @@
 import axios from 'axios';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { InformationCard } from '../components/ui/InformationCard';
-import { getEmployeeProfile } from '../features/employees/employees.api';
+import { useAuth } from '../features/auth/AuthProvider';
+import { createEmployeeLoginAccount, getEmployeeProfile, resetEmployeeLoginPassword } from '../features/employees/employees.api';
+import type { EmployeeLoginAccount } from '../features/employees/types';
 
 const msg = (error: unknown) => axios.isAxiosError<{ message: string }>(error) ? error.response?.data.message ?? 'Request failed' : 'Something went wrong';
 const Detail = ({ label, value }: { label: string; value: string }) => <div><dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</dt><dd className="mt-1 text-sm text-slate-700">{value}</dd></div>;
 const date = (value: string) => new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(value));
 const money = (value: number) => `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+const EmployeeLoginAccess = ({ employeeId, employeeEmail, account }: { employeeId: string; employeeEmail?: string; account: EmployeeLoginAccount | null }) => {
+  const { user } = useAuth(); const client = useQueryClient(); const [email, setEmail] = useState(employeeEmail ?? ''); const [password, setPassword] = useState(''); const [error, setError] = useState<string>(); const [success, setSuccess] = useState<string>();
+  const mutation = useMutation({ mutationFn: () => account ? resetEmployeeLoginPassword({ id: employeeId, password }) : createEmployeeLoginAccount({ id: employeeId, email, password }), onSuccess: () => { setPassword(''); setError(undefined); setSuccess(account ? 'Password reset successfully.' : 'Employee login account created successfully.'); void client.invalidateQueries({ queryKey: ['employee-profile', employeeId] }); }, onError: (reason) => setError(msg(reason)) });
+  if (user?.role !== 'Admin') return null;
+  const submit = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); setError(undefined); setSuccess(undefined); if (!account && !/^\S+@\S+\.\S+$/.test(email.trim())) return setError('Enter a valid email address.'); if (password.length < 8) return setError('Password must be at least 8 characters.'); mutation.mutate(); };
+  return <InformationCard title="Employee Login"><form onSubmit={submit} className="space-y-4"><p className="text-sm text-slate-500">{account ? `This employee can sign in using ${account.email}.` : 'Create a login account so this employee can sign in with their own credentials.'}</p>{!account && <label className="block text-sm font-medium text-slate-700">Login Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" /></label>}<label className="block text-sm font-medium text-slate-700">{account ? 'New Password' : 'Temporary Password'}<input value={password} onChange={(event) => setPassword(event.target.value)} type="password" minLength={8} autoComplete="new-password" className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" /></label>{error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}{success && <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{success}</p>}<button disabled={mutation.isPending} className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{mutation.isPending ? 'Saving…' : account ? 'Reset Password' : 'Create Login Account'}</button></form></InformationCard>;
+};
 
 export const EmployeeDetailsPage = () => {
   const { id = '' } = useParams();
   const query = useQuery({ queryKey: ['employee-profile', id], queryFn: () => getEmployeeProfile(id), enabled: Boolean(id) });
   if (query.isLoading) return <p className="text-sm text-slate-500">Loading employee profile…</p>;
   if (query.isError || !query.data) return <div className="rounded-xl bg-red-50 p-5 text-sm text-red-700">{query.isError ? msg(query.error) : 'Employee not found'}</div>;
-  const { employee, assignedServices, metrics, serviceHistory } = query.data;
+  const { employee, account, assignedServices, metrics, serviceHistory } = query.data;
   return <div className="space-y-6">
     <div className="flex items-start justify-between"><div><p className="text-sm font-medium text-brand-600">Employee profile</p><h2 className="mt-1 text-2xl font-bold">{employee.firstName} {employee.lastName}</h2></div><div className="flex gap-3"><Link to={`/employees/${id}/edit`} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white">Edit Employee</Link><Link to="/employees" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium">Back</Link></div></div>
     <div className="grid gap-6 xl:grid-cols-3"><InformationCard title="Personal Information" className="xl:col-span-2"><dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"><Detail label="Designation" value={employee.designation} /><Detail label="Joining Date" value={date(employee.joiningDate)} /><Detail label="Gender" value={employee.gender || '—'} /><Detail label="Salary" value={employee.salary === undefined ? '—' : money(employee.salary)} /><Detail label="Status" value={employee.isActive ? 'Active' : 'Inactive'} /><Detail label="Skills" value={employee.skills.length ? employee.skills.join(', ') : '—'} /></dl></InformationCard><InformationCard title="Contact Details"><dl className="space-y-4"><Detail label="Mobile" value={employee.mobileNumber} /><Detail label="Email" value={employee.email || '—'} /><Detail label="Emergency Contact" value={employee.emergencyContact || '—'} /><Detail label="Address" value={employee.address || '—'} /></dl></InformationCard></div>
+    <EmployeeLoginAccess employeeId={employee.id} employeeEmail={employee.email} account={account} />
     <InformationCard title="Assigned Services">{assignedServices.length ? <div className="flex flex-wrap gap-2">{assignedServices.map((service) => <span key={service.id} className="rounded-full bg-brand-50 px-3 py-1.5 text-sm text-brand-700">{service.name}</span>)}</div> : <p className="text-sm text-slate-500">No services assigned yet.</p>}</InformationCard>
     {employee.notes && <InformationCard title="Notes"><p className="text-sm text-slate-700">{employee.notes}</p></InformationCard>}
     <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">{[['Customers Served', String(metrics.customersServed)], ['Revenue Generated', money(metrics.revenueGenerated)], ['Services Completed', String(metrics.totalServicesPerformed)], ['Average Rating', String(metrics.averageRating)]].map(([title, value]) => <InformationCard key={title} title={title}><p className="text-xl font-bold">{value}</p><p className="mt-2 text-sm text-slate-500">Calculated from billing records.</p></InformationCard>)}</div>
