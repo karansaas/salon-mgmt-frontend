@@ -16,6 +16,7 @@ import { LoginPage } from './pages/LoginPage';
 import { LoyaltySettingsPage } from './pages/LoyaltySettingsPage';
 import { LowStockPage } from './pages/LowStockPage';
 import { NewBillPage } from './pages/NewBillPage';
+import { MyAttendancePage } from './pages/MyAttendancePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProductDetailsPage } from './pages/ProductDetailsPage';
 import { ProductsPage } from './pages/ProductsPage';
@@ -62,6 +63,9 @@ export const App = () => <Routes>
       </Route>
       <Route element={<RoleRoute allowedRoles={['Admin']} />}>
         <Route path="settings/loyalty" element={<LoyaltySettingsPage />} />
+      </Route>
+      <Route element={<RoleRoute allowedRoles={['Employee']} />}>
+        <Route path="my-attendance" element={<MyAttendancePage />} />
       </Route>
       <Route path="clients" element={<ClientsPage />} />
       <Route path="clients/new" element={<AddClientPage />} />
