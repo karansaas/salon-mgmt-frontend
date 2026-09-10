@@ -49,17 +49,11 @@ export const App = () => <Routes>
         <Route path="employees/new" element={<AddEmployeePage />} />
         <Route path="employees/:id" element={<EmployeeDetailsPage />} />
         <Route path="employees/:id/edit" element={<EditEmployeePage />} />
-        <Route path="services/new" element={<AddServicePage />} />
         <Route path="services/:id" element={<ServiceDetailsPage />} />
-        <Route path="services/:id/edit" element={<EditServicePage />} />
         <Route path="products/low-stock" element={<LowStockPage />} />
-        <Route path="products/new" element={<AddProductPage />} />
         <Route path="products/:id" element={<ProductDetailsPage />} />
-        <Route path="products/:id/edit" element={<EditProductPage />} />
         <Route path="professional-products/low-stock" element={<LowStockPage productType="PROFESSIONAL" basePath="/professional-products" title="Professional Products Low Stock" />} />
-        <Route path="professional-products/new" element={<AddProductPage productType="PROFESSIONAL" basePath="/professional-products" />} />
         <Route path="professional-products/:id" element={<ProductDetailsPage productType="PROFESSIONAL" basePath="/professional-products" />} />
-        <Route path="professional-products/:id/edit" element={<EditProductPage productType="PROFESSIONAL" basePath="/professional-products" />} />
         <Route path="clients/:id/edit" element={<EditClientPage />} />
       </Route>
       <Route element={<RoleRoute allowedRoles={['Admin']} />}>
@@ -73,8 +67,14 @@ export const App = () => <Routes>
       <Route path="clients/new" element={<AddClientPage />} />
       <Route path="clients/:id" element={<ClientDetailsPage />} />
       <Route path="services" element={<ServicesPage />} />
+      <Route path="services/new" element={<AddServicePage />} />
+      <Route path="services/:id/edit" element={<EditServicePage />} />
       <Route path="products" element={<ProductsPage />} />
+      <Route path="products/new" element={<AddProductPage />} />
+      <Route path="products/:id/edit" element={<EditProductPage />} />
       <Route path="professional-products" element={<ProductsPage productType="PROFESSIONAL" title="Professional Products" description="Manage internal-use salon products and inventory." basePath="/professional-products" />} />
+      <Route path="professional-products/new" element={<AddProductPage productType="PROFESSIONAL" basePath="/professional-products" />} />
+      <Route path="professional-products/:id/edit" element={<EditProductPage productType="PROFESSIONAL" basePath="/professional-products" />} />
       <Route path="billing" element={<BillsPage />} />
       <Route path="billing/new" element={<NewBillPage />} />
       <Route path="billing/:id" element={<BillDetailsPage />} />
