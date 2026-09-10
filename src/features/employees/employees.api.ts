@@ -1,5 +1,5 @@
 import { api } from '../../lib/api'; import type { Employee, EmployeeInput, EmployeeListResponse, EmployeeLoginAccount, EmployeeProfile } from './types';
-export const getEmployees = async (params: { page: number; search: string; designation: string; status: string }): Promise<EmployeeListResponse> => (await api.get<EmployeeListResponse>('/employees', { params: { ...params, limit: 10, sortBy: 'createdAt', sortOrder: 'desc', designation: params.designation || undefined } })).data;
+export const getEmployees = async (params: { page: number; search: string; designation: string; status: string; limit?: number }): Promise<EmployeeListResponse> => (await api.get<EmployeeListResponse>('/employees', { params: { ...params, limit: params.limit ?? 10, sortBy: 'createdAt', sortOrder: 'desc', designation: params.designation || undefined } })).data;
 export const getEmployee = async (id: string): Promise<Employee> => (await api.get<{ employee: Employee }>(`/employees/${id}`)).data.employee;
 export const createEmployee = async (data: EmployeeInput): Promise<Employee> => (await api.post<{ employee: Employee }>('/employees', data)).data.employee;
 export const updateEmployee = async ({ id, data }: { id: string; data: EmployeeInput }): Promise<Employee> => (await api.put<{ employee: Employee }>(`/employees/${id}`, data)).data.employee;
