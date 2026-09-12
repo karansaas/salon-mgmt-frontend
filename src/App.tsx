@@ -32,7 +32,7 @@ import { useAuth } from './features/auth/AuthProvider';
 
 const LoginRoute = () => {
   const { user, isLoading } = useAuth();
-  return !isLoading && user ? <Navigate to={user.role === 'Employee' ? '/billing' : '/admin'} replace /> : <LoginPage />;
+  return !isLoading && user ? <Navigate to={user.role === 'Employee' ? '/my-attendance' : user.role === 'Receptionist' ? '/billing' : '/admin'} replace /> : <LoginPage />;
 };
 
 export const App = () => <Routes>
@@ -60,24 +60,26 @@ export const App = () => <Routes>
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="settings/loyalty" element={<LoyaltySettingsPage />} />
       </Route>
-      <Route element={<RoleRoute allowedRoles={['Employee']} />}>
+      <Route element={<RoleRoute allowedRoles={['Employee', 'Receptionist']} />}>
         <Route path="my-attendance" element={<MyAttendancePage />} />
       </Route>
-      <Route path="clients" element={<ClientsPage />} />
-      <Route path="clients/new" element={<AddClientPage />} />
-      <Route path="clients/:id" element={<ClientDetailsPage />} />
-      <Route path="services" element={<ServicesPage />} />
-      <Route path="services/new" element={<AddServicePage />} />
-      <Route path="services/:id/edit" element={<EditServicePage />} />
-      <Route path="products" element={<ProductsPage />} />
-      <Route path="products/new" element={<AddProductPage />} />
-      <Route path="products/:id/edit" element={<EditProductPage />} />
-      <Route path="professional-products" element={<ProductsPage productType="PROFESSIONAL" title="Professional Products" description="Manage internal-use salon products and inventory." basePath="/professional-products" />} />
-      <Route path="professional-products/new" element={<AddProductPage productType="PROFESSIONAL" basePath="/professional-products" />} />
-      <Route path="professional-products/:id/edit" element={<EditProductPage productType="PROFESSIONAL" basePath="/professional-products" />} />
-      <Route path="billing" element={<BillsPage />} />
-      <Route path="billing/new" element={<NewBillPage />} />
-      <Route path="billing/:id" element={<BillDetailsPage />} />
+      <Route element={<RoleRoute allowedRoles={['Admin', 'Staff', 'Receptionist']} />}>
+        <Route path="clients" element={<ClientsPage />} />
+        <Route path="clients/new" element={<AddClientPage />} />
+        <Route path="clients/:id" element={<ClientDetailsPage />} />
+        <Route path="services" element={<ServicesPage />} />
+        <Route path="services/new" element={<AddServicePage />} />
+        <Route path="services/:id/edit" element={<EditServicePage />} />
+        <Route path="products" element={<ProductsPage />} />
+        <Route path="products/new" element={<AddProductPage />} />
+        <Route path="products/:id/edit" element={<EditProductPage />} />
+        <Route path="professional-products" element={<ProductsPage productType="PROFESSIONAL" title="Professional Products" description="Manage internal-use salon products and inventory." basePath="/professional-products" />} />
+        <Route path="professional-products/new" element={<AddProductPage productType="PROFESSIONAL" basePath="/professional-products" />} />
+        <Route path="professional-products/:id/edit" element={<EditProductPage productType="PROFESSIONAL" basePath="/professional-products" />} />
+        <Route path="billing" element={<BillsPage />} />
+        <Route path="billing/new" element={<NewBillPage />} />
+        <Route path="billing/:id" element={<BillDetailsPage />} />
+      </Route>
     </Route>
   </Route>
   <Route path="*" element={<NotFoundPage />} />

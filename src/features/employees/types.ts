@@ -2,5 +2,5 @@ export interface Employee { id: string; firstName: string; lastName?: string; mo
 export interface EmployeeInput { firstName: string; lastName?: string; mobileNumber: string; email?: string; gender?: 'Male' | 'Female' | 'Other'; designation: string; joiningDate: string; salary?: number; address?: string; emergencyContact?: string; skills: string[]; assignedServices: string[]; notes?: string; isActive: boolean; }
 export interface EmployeeListResponse { employees: Employee[]; pagination: { page: number; limit: number; total: number; totalPages: number; }; }
 export interface AssignedService { id: string; name: string; category: string; duration: number; price: number; }
-export interface EmployeeLoginAccount { id: string; email: string; isActive: boolean; }
+export interface EmployeeLoginAccount { id: string; email: string; role?: 'Employee' | 'Receptionist'; isActive: boolean; }
 export interface EmployeeProfile { employee: Employee; account: EmployeeLoginAccount | null; assignedServices: AssignedService[]; serviceHistory: { billId: string; date: string; invoiceNumber: string; client: string; service: string; amount: number; quantity: number; }[]; metrics: { customersServed: number; revenueGenerated: number; totalServicesPerformed: number; averageRating: number; }; }
