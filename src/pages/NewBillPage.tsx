@@ -53,7 +53,9 @@ const schema = z.object({
   })),
   products: z.array(z.object({
     productId: z.string().min(1),
-    quantity: z.number().int().positive()
+    quantity: z.number().int().positive(),
+    discountType: z.enum(['FIXED', 'PERCENTAGE']),
+    discountValue: z.number().min(0)
   })),
   discountValue: z.number().min(0),
   taxRate: z.number().min(0),
@@ -165,7 +167,14 @@ export const NewBillPage = () => {
   });
   const filteredServices = useMemo(() => (serviceQuery.data ?? []).filter(service => service.name.toLowerCase().includes(serviceSearch.trim().toLowerCase())), [serviceQuery.data, serviceSearch]);
   const serviceSubtotal = useMemo(() => round(services.reduce((sum, line) => sum + (serviceQuery.data?.find(service => service.id === line.serviceId)?.price ?? 0) * line.quantity, 0)), [services, serviceQuery.data]);
-  const productSubtotal = useMemo(() => round(products.reduce((sum, line) => sum + (productQuery.data?.find(product => product.id === line.productId)?.sellingPrice ?? 0) * line.quantity, 0)), [products, productQuery.data]);
+  const productAmounts = useMemo(() => products.map((line) => {
+    const unitPrice = productQuery.data?.find((product) => product.id === line.productId)?.sellingPrice ?? 0;
+    const grossTotal = round(unitPrice * line.quantity);
+    const requestedDiscount = line.discountType === 'PERCENTAGE' ? grossTotal * line.discountValue / 100 : line.discountValue;
+    const discountAmount = round(Math.min(Math.max(0, requestedDiscount), grossTotal));
+    return { grossTotal, discountAmount, total: round(grossTotal - discountAmount) };
+  }), [products, productQuery.data]);
+  const productSubtotal = round(productAmounts.reduce((sum, line) => sum + line.total, 0));
   const subtotal = round(serviceSubtotal + productSubtotal);
   const normalDiscount = round(Math.min(discountType === 'PERCENTAGE' ? subtotal * discountValue / 100 : discountValue, subtotal));
   const beforeLoyalty = round(subtotal - normalDiscount);
@@ -236,6 +245,8 @@ export const NewBillPage = () => {
     }
     if (discountType === 'PERCENTAGE' && discountValue > 100) return setValidationError('Percentage discount cannot exceed 100%');
     if (discountType === 'FIXED' && discountValue > subtotal) return setValidationError('Fixed discount cannot exceed subtotal');
+    if (products.some((line, index) => line.discountType === 'PERCENTAGE' && line.discountValue > 100)) return setValidationError('Product percentage discount cannot exceed 100%');
+    if (products.some((line, index) => line.discountType === 'FIXED' && line.discountValue > productAmounts[index].grossTotal)) return setValidationError('A product discount cannot exceed that product line total');
     if (loyaltyError) return setValidationError(loyaltyError);
     const requested = products.reduce<Record<string, number>>((all, line) => ({
       ...all,
@@ -283,8 +294,8 @@ export const NewBillPage = () => {
               setClientSearch('');
               clearLoyalty();
             }} className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"><strong>{client.firstName} {client.lastName ?? ''}</strong><span className="ml-2 text-slate-500">{client.mobileNumber}</span></button>)}</div> : null}</div> : <div className="mt-4 grid gap-4 sm:grid-cols-3"><input value={walkInName} onChange={event => setWalkInName(event.target.value)} placeholder="Customer name *" className="rounded-lg border border-slate-300 px-3 py-2.5" /><input value={walkInMobile} onChange={event => setWalkInMobile(event.target.value)} placeholder="Mobile number (optional)" className="rounded-lg border border-slate-300 px-3 py-2.5" /><input value={walkInDateOfBirth} onChange={event => setWalkInDateOfBirth(event.target.value)} type="date" max={new Date().toISOString().slice(0, 10)} aria-label="Date of birth (optional)" className="rounded-lg border border-slate-300 px-3 py-2.5" /></div>}</section><section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Services</h2><button onClick={() => setServices(rows => [...rows, {
-            serviceId: '',
-            employeeId: '',
+          serviceId: '',
+          employeeId: '',
             quantity: 1
           }])} className="text-sm font-semibold text-brand-600">+ Add Service</button></div><input value={serviceSearch} onChange={event => setServiceSearch(event.target.value)} placeholder="Search services by name" aria-label="Search services" className="mt-4 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm" />{services.map((row, index) => {
           const service = serviceQuery.data?.find(item => item.id === row.serviceId);
@@ -300,14 +311,17 @@ export const NewBillPage = () => {
             })} type="number" min="1" className="rounded-lg border border-slate-300 px-2 py-2" /><span className="py-2 text-sm font-medium">{money((service?.price ?? 0) * row.quantity)}</span><button onClick={() => setServices(rows => rows.filter((_, i) => i !== index))} className="justify-self-start whitespace-nowrap text-sm text-red-600">Remove</button></div>;
         })}{!services.length && <p className="mt-4 text-sm text-slate-500">No services added.</p>}</section><section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Products</h2><button onClick={() => setProducts(rows => [...rows, {
             productId: '',
-            quantity: 1
+            quantity: 1,
+            discountType: 'FIXED',
+            discountValue: 0
           }])} className="text-sm font-semibold text-brand-600">+ Add Product</button></div>{products.map((row, index) => {
           const product = productQuery.data?.find(item => item.id === row.productId);
           const used = products.filter((_, i) => i !== index && products[i].productId === row.productId).reduce((sum, item) => sum + item.quantity, 0);
           const exceeds = product && row.quantity + used > product.currentStock;
-          return <div key={index} className="mt-4 grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[minmax(0,2fr)_90px_100px_auto] md:items-start"><div className="min-w-0"><BillingProductPicker products={productQuery.data ?? []} value={row.productId} onChange={productId => updateProduct(index, { productId })} isLoading={productQuery.isLoading} isError={productQuery.isError} />{exceeds && <p className="mt-1 text-xs text-red-600">Insufficient stock</p>}</div><input value={row.quantity} onChange={event => updateProduct(index, {
+          const amount = productAmounts[index];
+          return <div key={index} className="mt-4 rounded-lg bg-slate-50 p-3"><div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_90px_100px_auto] md:items-start"><div className="min-w-0"><BillingProductPicker products={productQuery.data ?? []} value={row.productId} onChange={productId => updateProduct(index, { productId })} isLoading={productQuery.isLoading} isError={productQuery.isError} />{exceeds && <p className="mt-1 text-xs text-red-600">Insufficient stock</p>}</div><input value={row.quantity} onChange={event => updateProduct(index, {
               quantity: Math.max(1, Number(event.target.value))
-            })} type="number" min="1" className="h-11 rounded-lg border border-slate-300 px-2 py-2" /><span className="flex h-11 items-center text-sm font-medium">{money((product?.sellingPrice ?? 0) * row.quantity)}</span><button onClick={() => setProducts(rows => rows.filter((_, i) => i !== index))} className="flex h-11 items-center whitespace-nowrap text-sm text-red-600">Remove</button></div>;
+            })} type="number" min="1" className="h-11 rounded-lg border border-slate-300 px-2 py-2" /><span className="flex h-11 items-center text-sm font-medium">{money(amount?.total ?? 0)}</span><button onClick={() => setProducts(rows => rows.filter((_, i) => i !== index))} className="flex h-11 items-center whitespace-nowrap text-sm text-red-600">Remove</button></div>{product && <div className="mt-3 grid gap-2 border-t border-slate-200 pt-3 sm:grid-cols-[150px_1fr_auto] sm:items-end"><label className="text-xs font-medium text-slate-600">Product discount type<select value={row.discountType} onChange={event => updateProduct(index, { discountType: event.target.value as ProductLine['discountType'] })} className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm"><option value="FIXED">Fixed (₹)</option><option value="PERCENTAGE">Percentage (%)</option></select></label><label className="text-xs font-medium text-slate-600">Product discount<input value={row.discountValue} onChange={event => updateProduct(index, { discountValue: Math.max(0, Number(event.target.value)) })} type="number" min="0" max={row.discountType === 'PERCENTAGE' ? 100 : amount.grossTotal} step="0.01" className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm" /></label><p className="pb-2 text-sm text-slate-600">{amount.discountAmount > 0 ? <>- {money(amount.discountAmount)} · Net {money(amount.total)}</> : <>Line total {money(amount.grossTotal)}</>}</p></div>}</div>;
         })}{!products.length && <p className="mt-4 text-sm text-slate-500">No products added.</p>}</section></div><aside><section className="sticky top-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="text-lg font-semibold">Bill Summary</h2><div className="mt-4 space-y-2 text-sm"><p className="flex justify-between"><span>Services Subtotal</span><strong>{money(serviceSubtotal)}</strong></p><p className="flex justify-between"><span>Products Subtotal</span><strong>{money(productSubtotal)}</strong></p><p className="flex justify-between border-t pt-2"><span>Subtotal</span><strong>{money(subtotal)}</strong></p></div><div className="mt-4 grid grid-cols-2 gap-2"><select value={discountType} onChange={event => setDiscountType(event.target.value as typeof discountType)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm"><option value="FIXED">Fixed discount</option><option value="PERCENTAGE">Percentage</option></select><input value={discountValue} onChange={event => setDiscountValue(Math.max(0, Number(event.target.value)))} type="number" min="0" className="rounded-lg border border-slate-300 px-2 py-2" /></div>{selectedClient && <div className="mt-4 rounded-lg border border-brand-100 bg-brand-50 p-3"><p className="text-sm font-semibold text-brand-900">Loyalty Points</p><p className="mt-1 text-xs text-brand-700">{loyalty.isLoading ? 'Loading loyalty balance…' : loyalty.isError ? 'Loyalty balance could not be loaded.' : `${availablePoints.toLocaleString('en-IN')} points available`}</p>{config && <><p className="mt-2 text-xs text-brand-700">{config.redemptionPoints} points = {money(config.redemptionValue)} · Minimum {config.minimumRedemptionPoints} points</p><label className="mt-3 block text-sm font-medium text-brand-900">Points to redeem<input value={loyaltyPointsRedeemed} onChange={event => setLoyaltyPointsRedeemed(Math.max(0, Number(event.target.value)))} type="number" min="0" max={maxPoints} step="1" disabled={loyalty.isLoading || availablePoints === 0} className="mt-1 w-full rounded-lg border border-brand-200 bg-white px-2 py-2 disabled:cursor-not-allowed disabled:bg-slate-100" /></label>{availablePoints === 0 && <p className="mt-2 text-xs text-slate-600">This client has no points available to redeem.</p>}{loyaltyError && <p className="mt-2 text-xs text-red-600">{loyaltyError}</p>}</>}</div>}<label className="mt-3 block text-sm font-medium">GST / Tax<select value={taxRate} onChange={event => setTaxRate(Number(event.target.value))} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2"><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></label><div className="mt-4 space-y-2 border-t pt-3 text-sm"><p className="flex justify-between"><span>Discount</span><span>-{money(normalDiscount)}</span></p>{selectedClient && <p className="flex justify-between"><span>Loyalty Discount</span><span>-{money(loyaltyDiscount)}</span></p>}<p className="flex justify-between"><span>Taxable Amount</span><span>{money(taxable)}</span></p><p className="flex justify-between"><span>Tax</span><span>{money(tax)}</span></p><p className="flex justify-between text-lg font-bold"><span>Grand Total</span><span>{money(grandTotal)}</span></p></div><div className="mt-5 border-t pt-4"><div className="flex items-center justify-between"><h3 className="font-semibold">Payment</h3><button onClick={() => setPayments(rows => [...rows, {
               method: 'UPI',
               amount: 0
