@@ -18,6 +18,7 @@ import { LowStockPage } from './pages/LowStockPage';
 import { NewBillPage } from './pages/NewBillPage';
 import { MyAttendancePage } from './pages/MyAttendancePage';
 import { AttendancePage } from './pages/AttendancePage';
+import { PayrollPage } from './pages/PayrollPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProductDetailsPage } from './pages/ProductDetailsPage';
 import { ProductsPage } from './pages/ProductsPage';
@@ -58,6 +59,7 @@ export const App = () => <Routes>
       </Route>
       <Route element={<RoleRoute allowedRoles={['Admin']} />}>
         <Route path="attendance" element={<AttendancePage />} />
+        <Route path="payroll" element={<PayrollPage />} />
         <Route path="settings/loyalty" element={<LoyaltySettingsPage />} />
       </Route>
       <Route element={<RoleRoute allowedRoles={['Employee', 'Receptionist']} />}>
